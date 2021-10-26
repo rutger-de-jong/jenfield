@@ -1,5 +1,9 @@
 var theme = {} || theme;
 
+theme.settings = {
+    waitListen: 1500
+}
+
 theme.init = function () {
 
     console.log = function(data) {
@@ -26,7 +30,9 @@ theme.init = function () {
             questionText,
             result => {
                 if (result) {
-                    synthesizer.close();
+                    synthesizer.close();                
+                    
+                    setTimeout(function() { theme.functions.startListening(); },2000);
                     return result.audioData;
                 }
             },
@@ -34,36 +40,65 @@ theme.init = function () {
                 window.console.log(error);
                 synthesizer.close();
             });
-
-        speechConfig.speechRecognitionLanguage = "en-US";
-        var sttAudioConfig  = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-        recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, sttAudioConfig);
-
-        recognizer.recognizeOnceAsync(
-          function (result) {
-
-            let oldText = answerTextarea.val();
-            
-            answerTextarea.val(oldText + result.text)
-            
-            recognizer.close();
-            recognizer = undefined;
-          },
-          function (err) {
-            
-            answerTextarea.val(oldText + result.text)
-            window.console.log(err);
-
-            recognizer.close();
-            recognizer = undefined;
-        });
-
+                
+        
 
     }).fail(function() {
         console.log("Failed to open Cognitive Services: " + currentPath);
-    });      
+    });
     
     // hide answer container
 
 };
 
+theme.functions = {
+    startListening() {
+        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription("cff004e326644706a97b025c19495f4d", "westeurope");
+        speechConfig.speechRecognitionLanguage = "en-US";
+
+        var sttAudioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+        recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, sttAudioConfig);
+
+            recognizer.recognizeOnceAsync(
+
+            function (result) {
+                
+
+                if (result.privText !== undefined) {
+
+                // it's a code question
+                if ($(".category.single")) {
+
+                    $(".category.single").each(function(index) {
+                        if ($(this).text().trim() === result.privText.trim()) { 
+                            $(".category.single .toggle.scale")[index].click();
+                            
+                            
+                            setTimeout(() => { 
+                                $(".btn.button-next").click();
+                            }, 2000);
+                        }
+                    });                  
+
+                // it's an open question
+                } else {
+
+                    let oldText = answerTextarea.val();
+                    answerTextarea.val(oldText + result.text)
+                }
+                                
+                recognizer.close();
+                recognizer = undefined;
+            }
+            },
+            function (err) {
+                
+                answerTextarea.val(oldText + result.text)
+                window.console.log(err);
+
+                recognizer.close();
+                recognizer = undefined;
+            });
+
+    }
+}
